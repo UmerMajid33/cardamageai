@@ -29,6 +29,10 @@ services:
         value: "0.2"
       - key: DAMAGESCAN_MAX_TOKENS
         value: "3500"
+      # Reasoning off: qwen otherwise spends the whole output budget thinking
+      # and the JSON never completes. See llm.py.
+      - key: DAMAGESCAN_REASONING
+        value: "none"
 
       - key: DAMAGESCAN_RATE_PER_IP
         value: "12"

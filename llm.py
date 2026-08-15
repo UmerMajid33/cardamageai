@@ -27,6 +27,17 @@ MAX_TOKENS = int(os.environ.get("DAMAGESCAN_MAX_TOKENS", "3500"))
 # Assessment wants determinism, not flair.
 TEMPERATURE = float(os.environ.get("DAMAGESCAN_TEMPERATURE", "0.2"))
 
+# qwen is a reasoning model, and left to itself it spends most of the output
+# budget thinking before it writes any JSON - measured at 2415 tokens of
+# reasoning against 168 tokens of actual answer on the same image. When that
+# thinking runs past the ceiling the JSON never completes and Groq rejects the
+# call with json_validate_failed and an empty generation.
+#
+# This is structured extraction against a strict schema, not a problem that
+# needs deliberation, so reasoning is off by default. Set "default" to turn it
+# back on, and raise DAMAGESCAN_MAX_TOKENS well above 3500 if you do.
+REASONING = os.environ.get("DAMAGESCAN_REASONING", "none").strip()
+
 _client = None
 
 
@@ -63,18 +74,34 @@ def analyse_image(data_url, system, user_text, schema):
         ]},
     ]
 
-    try:
-        response = client().chat.completions.create(
-            model=MODEL,
-            messages=messages,
-            max_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            response_format={
+    def create(max_tokens, reasoning):
+        kwargs = {
+            "model": MODEL,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": TEMPERATURE,
+            "response_format": {
                 "type": "json_schema",
                 "json_schema": {"name": "assessment", "strict": True,
                                 "schema": schema},
             },
-        )
+        }
+        if reasoning:
+            kwargs["reasoning_effort"] = reasoning
+        return client().chat.completions.create(**kwargs)
+
+    try:
+        try:
+            response = create(MAX_TOKENS, REASONING)
+        except groq.APIStatusError as first:
+            # json_validate_failed means the model ran out of room before the
+            # JSON was complete. One retry with reasoning off and more headroom
+            # fixes the overwhelming majority of these.
+            spent_on_thinking = (first.status_code == 400
+                                 and "json_validate_failed" in str(first))
+            if not spent_on_thinking or REASONING == "none":
+                raise
+            response = create(min(MAX_TOKENS * 2, 8000), "none")
     except groq.NotFoundError as exc:
         raise RuntimeError(
             f"This key has no access to '{MODEL}'. Available: "
@@ -85,8 +112,16 @@ def analyse_image(data_url, system, user_text, schema):
             raise RuntimeError(
                 f"Groq rate limit:\n  {exc.message}\n\n"
                 f"The photo may be too large. Images are downscaled in the "
-                f"browser before upload - if this keeps happening, lower the "
-                f"limit in static/index.html or DAMAGESCAN_MAX_TOKENS in .env."
+                f"browser before upload - if this keeps happening, lower "
+                f"MAX_EDGE in static/index.html."
+            ) from exc
+        if exc.status_code == 400 and "json_validate_failed" in str(exc):
+            raise RuntimeError(
+                f"The model could not produce a complete report for this photo "
+                f"within {MAX_TOKENS} tokens.\n"
+                f"Raise DAMAGESCAN_MAX_TOKENS, or set DAMAGESCAN_REASONING=none "
+                f"(currently '{REASONING}') so the budget goes to the answer "
+                f"rather than to thinking."
             ) from exc
         raise
 
