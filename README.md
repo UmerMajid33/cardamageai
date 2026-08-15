@@ -74,6 +74,40 @@ costs several thousand tokens once the model tiles it, and the free tier allows
 8000 per minute in total. If you hit rate limits, lower `MAX_EDGE` in
 `static/index.html`.
 
+## Deploying to Render
+
+`render.yaml` is a blueprint — point Render at this repo and it reads the build
+command, start command, health check and environment.
+
+Two variables must be set in the Render dashboard, not in the repo:
+
+| Variable | |
+|---|---|
+| `GROQ_API_KEY` | your key |
+| `DAMAGESCAN_ACCESS_CODE` | a shared code callers must enter first |
+
+**Set the access code.** Without it the deployed URL is an open endpoint
+spending your Groq quota, and the free tier is exhausted by a handful of
+requests. A public URL gets found.
+
+Two rate limits back it up — `DAMAGESCAN_RATE_PER_IP` (12/hour) stops one
+person hammering it, and `DAMAGESCAN_RATE_GLOBAL` (60/hour) is what actually
+protects the quota, since an attacker with a pool of addresses walks straight
+past a per-IP rule. Neither a rejected code nor a malformed upload consumes an
+allowance.
+
+Counters are held in memory, so the service runs a single worker. That is the
+right shape regardless: Groq's per-minute budget means concurrent requests would
+only fail behind each other.
+
+### Known limits of the free plan
+
+- **No persistent disk**, so `assessments.db` is wiped on every restart and
+  history does not survive. Set `DAMAGESCAN_DB` to a path on a mounted disk on
+  a paid plan to keep it.
+- **The service sleeps when idle.** The first request after a sleep waits for a
+  cold start on top of the 10–30 seconds a vision call already takes.
+
 ## Not built yet
 
 - **Multiple photos per assessment.** One angle is one angle; real assessments

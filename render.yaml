@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: cardamageai
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # One worker on purpose. Rate-limit counters are in memory, and Groq's
+    # per-minute budget means concurrent requests would only fail behind each
+    # other. The long timeout is because a vision call takes 10-30 seconds.
+    startCommand: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --timeout 180
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+
+      # Set this in the Render dashboard. sync:false keeps it out of the repo.
+      - key: GROQ_API_KEY
+        sync: false
+
+      # Set a value to require a code before any assessment runs. Strongly
+      # recommended on a public URL - without it, anyone who finds the link
+      # spends your Groq quota.
+      - key: DAMAGESCAN_ACCESS_CODE
+        sync: false
+
+      - key: DAMAGESCAN_MODEL
+        value: qwen/qwen3.6-27b
+      - key: DAMAGESCAN_TEMPERATURE
+        value: "0.2"
+      - key: DAMAGESCAN_MAX_TOKENS
+        value: "3500"
+
+      - key: DAMAGESCAN_RATE_PER_IP
+        value: "12"
+      - key: DAMAGESCAN_RATE_GLOBAL
+        value: "60"

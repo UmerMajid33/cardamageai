@@ -5,10 +5,14 @@ the image it came from is not worth much when someone disputes it.
 """
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "assessments.db"
+# Configurable so a deployment can point this at a mounted disk. Render's free
+# plan has no persistent storage, so history there lasts until the next restart.
+DB_PATH = Path(os.environ.get("DAMAGESCAN_DB")
+               or Path(__file__).parent / "assessments.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS assessment (

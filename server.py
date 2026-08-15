@@ -9,6 +9,7 @@ from flask import Flask, jsonify, request, send_from_directory
 
 import assess
 import db
+import limits
 import llm
 import pricing
 
@@ -23,6 +24,8 @@ def api(handler):
     conn = db.connect()
     try:
         return jsonify(handler(conn))
+    except limits.RateLimited as exc:
+        return jsonify({"error": str(exc), "rate_limited": True}), 429
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
     finally:
@@ -39,6 +42,13 @@ def post_assess():
     body = request.get_json(silent=True) or {}
     data_url = body.get("image", "")
 
+    # Gate before anything expensive happens. Cheap rejections must not consume
+    # quota, and a wrong access code must not count against a rate limit.
+    try:
+        limits.check_access(request.headers.get("X-Access-Code", ""))
+    except limits.AccessDenied as exc:
+        return jsonify({"error": str(exc), "code_required": True}), 401
+
     def handler(conn):
         if not data_url.startswith("data:image/"):
             raise RuntimeError("No image received.")
@@ -47,6 +57,10 @@ def post_assess():
                 "That image is too large even after downscaling. Try a photo "
                 "taken further back, or a lower camera resolution."
             )
+
+        # Counted only once the request is worth spending quota on, so a
+        # malformed upload never burns someone's allowance.
+        limits.check_rate(limits.client_ip(request))
 
         report, usage = llm.analyse_image(
             data_url, assess.SYSTEM, assess.USER_PROMPT, assess.SCHEMA)
@@ -95,7 +109,19 @@ def get_rates():
     return api(lambda conn: pricing.load_rates())
 
 
+@app.get("/api/config")
+def get_config():
+    """What the page needs to know before it asks for anything."""
+    return jsonify(limits.status())
+
+
+@app.get("/healthz")
+def healthz():
+    return jsonify({"ok": True})
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("DAMAGESCAN_PORT", "5056"))
+    # Render supplies PORT; DAMAGESCAN_PORT is the local override.
+    port = int(os.environ.get("PORT") or os.environ.get("DAMAGESCAN_PORT", "5056"))
     print(f"\n  Damage assessment  ->  http://127.0.0.1:{port}\n")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

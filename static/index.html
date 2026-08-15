@@ -135,6 +135,17 @@
   .steps .w { font-weight: 650; font-size: 14.5px; }
   .steps .d { color: var(--muted); font-size: 13.5px; }
 
+  .lbl { display: block; font-size: 13px; font-weight: 600; margin-bottom: 7px; }
+  input[type="password"], input[type="text"] {
+    width: 100%; background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line-2); border-radius: 10px;
+    padding: 12px 13px; font: 16px var(--sans);
+  }
+  input[type="password"]:focus, input[type="text"]:focus {
+    outline: none; border-color: var(--brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent);
+  }
+
   .footnote {
     text-align: center; color: var(--faint); font-size: 12.5px;
     line-height: 1.55; padding: 4px 8px 8px;
@@ -284,6 +295,20 @@
   <!-- ============ scan ============ -->
   <section id="pane-scan">
 
+    <div id="gate" class="hidden">
+      <section class="hero">
+        <h2>Enter your access code.</h2>
+        <p>This assessor is limited to people with a code.</p>
+      </section>
+      <div class="card">
+        <label class="lbl" for="code">Access code</label>
+        <input id="code" type="password" autocomplete="one-time-code"
+               inputmode="text" placeholder="••••••••">
+        <div id="gate-err" class="err hidden" style="margin:12px 0 0"></div>
+        <button class="btn" id="code-go">Continue</button>
+      </div>
+    </div>
+
     <div id="step-capture">
       <section class="hero">
         <h2>Assess accident damage in seconds.</h2>
@@ -405,6 +430,8 @@ const MAX_EDGE = 800;
 const JPEG_QUALITY = 0.82;
 
 let currentImage = null;
+let accessCode = localStorage.getItem("ds_access_code") || "";
+let codeRequired = false;
 
 function showError(msg) {
   $("#err").textContent = msg;
@@ -414,9 +441,48 @@ function showError(msg) {
 function clearError() { $("#err").classList.add("hidden"); }
 
 function step(name) {
+  $("#gate").classList.add("hidden");
   for (const s of ["capture", "preview", "working", "report"]) {
     $("#step-" + s).classList.toggle("hidden", s !== name);
   }
+}
+
+/* ---------- access gate ---------- */
+function showGate(message) {
+  for (const s of ["capture", "preview", "working", "report"]) {
+    $("#step-" + s).classList.add("hidden");
+  }
+  $("#gate").classList.remove("hidden");
+  const err = $("#gate-err");
+  if (message) { err.textContent = message; err.classList.remove("hidden"); }
+  else err.classList.add("hidden");
+  $("#code").focus();
+}
+
+function submitCode() {
+  const value = $("#code").value.trim();
+  if (!value) return;
+  accessCode = value;
+  localStorage.setItem("ds_access_code", value);
+  $("#code").value = "";
+  clearError();
+  step("capture");
+}
+
+$("#code-go").onclick = submitCode;
+$("#code").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); submitCode(); }
+});
+
+async function boot() {
+  try {
+    const cfg = await (await fetch("/api/config")).json();
+    codeRequired = !!cfg.access_code_required;
+  } catch { codeRequired = false; }
+
+  if (codeRequired && !accessCode) showGate();
+  else step("capture");
+  loadHistory();
 }
 
 /* ---------- capture ---------- */
@@ -472,10 +538,21 @@ $("#analyse").onclick = async () => {
   try {
     const res = await fetch("/api/assess", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessCode ? { "X-Access-Code": accessCode } : {}),
+      },
       body: JSON.stringify({ image: currentImage }),
     });
     const data = await res.json();
+
+    // A rejected code sends them back to the gate rather than showing a raw
+    // error, and the bad code is forgotten so it cannot fail silently again.
+    if (res.status === 401) {
+      accessCode = "";
+      localStorage.removeItem("ds_access_code");
+      return showGate(data.error || "That code was not accepted.");
+    }
     if (!res.ok) throw new Error(data.error || res.statusText);
     renderReport(data);
     step("report");
@@ -712,8 +789,7 @@ document.querySelectorAll(".tab").forEach(tab => {
   };
 });
 
-step("capture");
-loadHistory();
+boot();
 </script>
 </body>
 </html>
