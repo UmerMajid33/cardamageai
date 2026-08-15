@@ -34,10 +34,16 @@ def client():
     global _client
     if _client is None:
         if not os.environ.get("GROQ_API_KEY", "").strip():
+            # An empty value in .env resolves to "", which the SDK accepts and
+            # then fails on with an opaque 401 much later. Catch it here.
+            deployed = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
+            where = ("Set GROQ_API_KEY in your host's environment settings "
+                     "(on Render: Dashboard > your service > Environment)."
+                     if deployed else
+                     "Paste it into damagescan/.env after GROQ_API_KEY= , with "
+                     "no quotes and no spaces around the = .")
             raise RuntimeError(
-                "No Groq API key found.\n"
-                "Paste it into damagescan/.env after GROQ_API_KEY= "
-                "(no quotes), then restart the server."
+                f"No Groq API key found.\n{where}\nThen restart the service."
             )
         _client = groq.Groq()
     return _client
