@@ -1,0 +1,8 @@
+# the key lives here
+.env
+
+# photographs of other people's accidents
+assessments.db
+
+__pycache__/
+*.pyc

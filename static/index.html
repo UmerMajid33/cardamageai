@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Damage Assessment</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body, h1, h2, h3, p, ul, li, dl, dd, figure { margin: 0; padding: 0; }
+  ul { list-style: none; }
+
+  :root {
+    --bg:      #f4f5f7;
+    --card:    #ffffff;
+    --ink:     #14161a;
+    --muted:   #5f6673;
+    --faint:   #9aa1ad;
+    --line:    #e2e5ea;
+    --line-2:  #cfd4dc;
+
+    --brand:   #1f5fd0;
+    --brand-d: #1a4fae;
+
+    --minor:    #b0790a;
+    --minor-bg: #fdf5e3;
+    --mod:      #c1560d;
+    --mod-bg:   #fdeee2;
+    --sev:      #c22a2a;
+    --sev-bg:   #fdeaea;
+    --ok:       #1c7a4a;
+    --ok-bg:    #e6f5ec;
+
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --shadow: 0 1px 2px #0f172a12, 0 6px 20px -12px #0f172a2e;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1114; --card: #171a1f; --ink: #e9ebef; --muted: #98a0ad;
+      --faint: #6b7280; --line: #262b33; --line-2: #333a45;
+      --brand: #5b93f0; --brand-d: #4a7fd8;
+      --minor: #e0ab48; --minor-bg: #2a2313;
+      --mod: #ef8a4a; --mod-bg: #2d1d12;
+      --sev: #f0736f; --sev-bg: #2e1618;
+      --ok: #57c98c; --ok-bg: #12271c;
+      --shadow: 0 1px 2px #0006, 0 6px 20px -12px #0009;
+    }
+  }
+
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 16px/1.55 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    padding: 0 0 env(safe-area-inset-bottom);
+  }
+  .shell { max-width: 560px; margin: 0 auto; padding: 0 16px 48px; }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+    margin: 0 -16px 20px; padding: 14px 16px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .glyph {
+    width: 30px; height: 30px; border-radius: 8px; flex: none;
+    background: var(--brand); display: grid; place-items: center;
+    color: #fff; font: 700 15px var(--sans);
+  }
+  .brand h1 { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+  .tabs { display: flex; gap: 4px; margin-top: 12px; }
+  .tab {
+    background: none; border: 0; cursor: pointer; color: var(--muted);
+    font: 600 14px var(--sans); padding: 9px 12px 11px;
+    border-bottom: 2px solid transparent;
+  }
+  .tab[aria-selected="true"] { color: var(--brand); border-bottom-color: var(--brand); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 18px; margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    font: 650 11px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--faint); margin-bottom: 14px;
+  }
+
+  /* ---------- capture ---------- */
+  .drop {
+    border: 2px dashed var(--line-2); border-radius: 16px;
+    padding: 40px 20px; text-align: center; background: var(--card);
+    transition: border-color .2s, background .2s;
+  }
+  .drop.over { border-color: var(--brand); background: var(--card); }
+  .drop .icon { font-size: 40px; line-height: 1; }
+  .drop p { color: var(--muted); font-size: 14px; margin-top: 10px; }
+
+  button.btn {
+    display: block; width: 100%; border: 0; border-radius: 12px;
+    padding: 15px 20px; font: 650 16px var(--sans); cursor: pointer;
+    background: var(--brand); color: #fff; margin-top: 14px;
+    transition: filter .15s, transform .1s;
+  }
+  button.btn:hover:not(:disabled) { filter: brightness(1.08); }
+  button.btn:active:not(:disabled) { transform: translateY(1px); }
+  button.btn:disabled { opacity: .5; cursor: default; }
+  button.ghost {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--line-2); font-weight: 600;
+  }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .preview { position: relative; border-radius: 14px; overflow: hidden; line-height: 0; }
+  .preview img { width: 100%; display: block; }
+  .preview .retake {
+    position: absolute; top: 10px; right: 10px; width: auto; margin: 0;
+    padding: 8px 14px; font-size: 13px; background: #000000b8; color: #fff;
+    backdrop-filter: blur(6px); border-radius: 9px;
+  }
+
+  /* ---------- working ---------- */
+  .working { text-align: center; padding: 30px 0; }
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 14px;
+    border: 3px solid var(--line); border-top-color: var(--brand);
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .working p { color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+  /* ---------- report ---------- */
+  .banner {
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+    border: 1px solid; font-size: 15px;
+  }
+  .banner.danger { background: var(--sev-bg); border-color: var(--sev); color: var(--sev); }
+  .banner.warn   { background: var(--minor-bg); border-color: var(--minor); color: var(--minor); }
+  .banner.good   { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
+  .banner strong { display: block; font-weight: 700; margin-bottom: 4px; }
+  .banner li { margin-top: 4px; padding-left: 16px; position: relative; }
+  .banner li::before { content: "•"; position: absolute; left: 3px; }
+
+  .ref {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font: 12px var(--mono); color: var(--faint); margin-bottom: 12px;
+  }
+  .summary { font-size: 16px; line-height: 1.6; }
+  .vmeta { color: var(--muted); font-size: 13.5px; margin-top: 10px; }
+
+  .finding { padding: 14px 0; border-top: 1px solid var(--line); }
+  .finding:first-of-type { border-top: 0; padding-top: 0; }
+  .finding .top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .finding .name { font-weight: 650; }
+  .pill {
+    font: 650 11px var(--mono); letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 20px; border: 1px solid;
+  }
+  .pill.minor    { background: var(--minor-bg); color: var(--minor); border-color: currentColor; }
+  .pill.moderate { background: var(--mod-bg);   color: var(--mod);   border-color: currentColor; }
+  .pill.severe   { background: var(--sev-bg);   color: var(--sev);   border-color: currentColor; }
+  .finding .note { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
+  .finding .meta { font: 11.5px var(--mono); color: var(--faint); margin-top: 6px; }
+  .conf { display: inline-flex; align-items: center; gap: 5px; }
+  .conf .track { width: 40px; height: 4px; border-radius: 2px; background: var(--line); }
+  .conf .fill { height: 100%; border-radius: 2px; background: var(--muted); }
+
+  /* ---------- estimate ---------- */
+  .total { text-align: center; padding: 6px 0 16px; }
+  .total .figure { font: 700 31px/1.15 var(--sans); letter-spacing: -.02em; }
+  .total .cur { font-size: 16px; color: var(--muted); font-weight: 600; }
+  .total .cap { font: 11px var(--mono); color: var(--faint); letter-spacing: .08em;
+                text-transform: uppercase; margin-top: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font: 650 10.5px var(--mono); letter-spacing: .08em;
+       text-transform: uppercase; color: var(--faint); padding: 0 0 8px; }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td { padding: 9px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  td .op { color: var(--muted); font-size: 12.5px; }
+  tfoot td { border-top: 1px solid var(--line-2); font-size: 13.5px; color: var(--muted); }
+  tfoot tr.grand td { font-weight: 700; color: var(--ink); font-size: 15px; }
+
+  .disclaimer {
+    font-size: 12.5px; line-height: 1.55; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; margin-top: 14px;
+  }
+
+  /* ---------- history ---------- */
+  .hrow {
+    display: flex; gap: 12px; align-items: center; width: 100%;
+    padding: 13px 0; border-top: 1px solid var(--line);
+    background: none; border-left: 0; border-right: 0; border-bottom: 0;
+    text-align: left; cursor: pointer; color: inherit; font: inherit;
+  }
+  .hrow:first-child { border-top: 0; }
+  .hrow .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .hrow .body { flex: 1; min-width: 0; }
+  .hrow .r { font: 11.5px var(--mono); color: var(--faint); }
+  .hrow .s { font-size: 14px; overflow: hidden; text-overflow: ellipsis;
+             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .hrow .amt { font: 650 13.5px var(--mono); white-space: nowrap; }
+
+  .err {
+    background: var(--sev-bg); border: 1px solid var(--sev); color: var(--sev);
+    border-radius: 11px; padding: 13px 15px; margin-bottom: 14px;
+    font: 13px/1.55 var(--mono); white-space: pre-wrap;
+  }
+  .empty { text-align: center; color: var(--faint); padding: 40px 0; font-size: 14px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="brand">
+      <div class="glyph">DS</div>
+      <h1>Damage Assessment</h1>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-pane="scan" aria-selected="true">Assess</button>
+      <button class="tab" role="tab" data-pane="history" aria-selected="false">History</button>
+    </nav>
+  </header>
+
+  <div id="err" class="err hidden"></div>
+
+  <!-- ============ scan ============ -->
+  <section id="pane-scan">
+
+    <div id="step-capture">
+      <label class="drop" id="drop" for="file">
+        <div class="icon" aria-hidden="true">📷</div>
+        <p><strong>Take a photo of the damage</strong></p>
+        <p>Stand back far enough to show the whole damaged area, plus a little
+           of the undamaged panel around it.</p>
+      </label>
+      <input id="file" type="file" accept="image/*" capture="environment" class="hidden">
+      <button class="btn" id="pick">Open camera</button>
+    </div>
+
+    <div id="step-preview" class="hidden">
+      <div class="preview">
+        <img id="shot" alt="The photo to be assessed">
+        <button class="btn retake" id="retake">Retake</button>
+      </div>
+      <button class="btn" id="analyse">Assess this damage</button>
+    </div>
+
+    <div id="step-working" class="card working hidden">
+      <div class="spinner"></div>
+      <p id="working-text">Reading the photo…</p>
+    </div>
+
+    <div id="step-report" class="hidden"></div>
+  </section>
+
+  <!-- ============ history ============ -->
+  <section id="pane-history" class="hidden">
+    <div class="card" id="history"></div>
+  </section>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const el = (t, c, x) => { const n = document.createElement(t);
+  if (c) n.className = c; if (x != null) n.textContent = x; return n; };
+
+// Downscale before upload. A raw phone photo is several thousand tokens once
+// the model tiles it, which blows the per-minute budget on its own.
+const MAX_EDGE = 800;
+const JPEG_QUALITY = 0.82;
+
+let currentImage = null;
+
+function showError(msg) {
+  $("#err").textContent = msg;
+  $("#err").classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function clearError() { $("#err").classList.add("hidden"); }
+
+function step(name) {
+  for (const s of ["capture", "preview", "working", "report"]) {
+    $("#step-" + s).classList.toggle("hidden", s !== name);
+  }
+}
+
+/* ---------- capture ---------- */
+async function loadFile(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    return showError("That file isn't an image.");
+  }
+  clearError();
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  currentImage = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+  $("#shot").src = currentImage;
+  step("preview");
+}
+
+$("#pick").onclick = () => $("#file").click();
+$("#file").onchange = e => loadFile(e.target.files[0]);
+$("#retake").onclick = () => { currentImage = null; $("#file").value = ""; step("capture"); };
+
+const drop = $("#drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.add("over");
+}));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.remove("over");
+}));
+drop.addEventListener("drop", e => loadFile(e.dataTransfer.files[0]));
+
+/* ---------- assess ---------- */
+const WORKING_STEPS = [
+  "Reading the photo…",
+  "Identifying panels and parts…",
+  "Grading severity…",
+  "Costing the repair…",
+];
+
+$("#analyse").onclick = async () => {
+  if (!currentImage) return;
+  clearError();
+  step("working");
+
+  let i = 0;
+  const ticker = setInterval(() => {
+    i = Math.min(i + 1, WORKING_STEPS.length - 1);
+    $("#working-text").textContent = WORKING_STEPS[i];
+  }, 2600);
+
+  try {
+    const res = await fetch("/api/assess", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: currentImage }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    renderReport(data);
+    step("report");
+    loadHistory();
+  } catch (e) {
+    showError(e.message);
+    step("preview");
+  } finally {
+    clearInterval(ticker);
+  }
+};
+
+/* ---------- report ---------- */
+const money = (n, cur) => `${cur} ${n.toLocaleString()}`;
+
+function renderReport(data) {
+  const { report, estimate, reference } = data;
+  const pane = $("#step-report");
+  pane.textContent = "";
+
+  // Safety first - this is the part someone acts on at the roadside.
+  if (report.safety_flags?.length) {
+    const b = el("div", "banner danger");
+    b.append(el("strong", null, "Safety concerns — check before driving"));
+    const ul = el("ul");
+    for (const f of report.safety_flags) ul.append(el("li", null, f));
+    b.append(ul);
+    pane.append(b);
+  }
+
+  if (!report.is_vehicle) {
+    const b = el("div", "banner warn");
+    b.append(el("strong", null, "No vehicle found in this photo"));
+    b.append(document.createTextNode(
+      "Point the camera at the damaged vehicle and try again."));
+    pane.append(b);
+    pane.append(retakeButton());
+    return;
+  }
+
+  if (report.photo_quality !== "good") {
+    const b = el("div", "banner warn");
+    b.append(el("strong", null,
+      report.photo_quality === "poor" ? "Photo quality is poor"
+                                      : "Photo could be better"));
+    b.append(document.createTextNode(
+      report.quality_note || "A clearer photo would give a more reliable result."));
+    pane.append(b);
+  }
+
+  // --- summary ---
+  const head = el("div", "card");
+  const ref = el("div", "ref");
+  ref.append(el("span", null, reference),
+             el("span", null, report.view || ""));
+  head.append(ref, el("div", "summary", report.summary));
+  const meta = [report.vehicle_type, report.vehicle_note].filter(Boolean).join(" · ");
+  if (meta) head.append(el("div", "vmeta", meta));
+  pane.append(head);
+
+  if (!report.has_visible_damage || !report.findings.length) {
+    const b = el("div", "banner good");
+    b.append(el("strong", null, "No visible damage found"));
+    b.append(document.createTextNode(
+      "Nothing in this photo needs repair. If you can see damage that the "
+      + "assessment missed, photograph it closer and try again."));
+    pane.append(b);
+    pane.append(retakeButton());
+    return;
+  }
+
+  // --- findings ---
+  const fc = el("div", "card");
+  fc.append(el("h2", null, `${report.findings.length} finding${report.findings.length > 1 ? "s" : ""}`));
+  for (const f of report.findings) {
+    const row = el("div", "finding");
+    const top = el("div", "top");
+    top.append(el("span", "name", f.part_label || f.part.replace(/_/g, " ")),
+               el("span", "pill " + f.severity, f.severity));
+    row.append(top, el("div", "note", f.note));
+
+    const meta = el("div", "meta");
+    meta.append(document.createTextNode(
+      `${f.damage_type.replace(/_/g, " ")} · ${f.extent} · `));
+    const conf = el("span", "conf");
+    const track = el("span", "track");
+    const fill = el("span", "fill");
+    fill.style.width = Math.round((f.confidence || 0) * 100) + "%";
+    fill.style.display = "block";
+    track.append(fill);
+    conf.append(document.createTextNode("confidence "), track,
+                document.createTextNode(Math.round((f.confidence || 0) * 100) + "%"));
+    meta.append(conf);
+    row.append(meta);
+    fc.append(row);
+  }
+  pane.append(fc);
+
+  if (report.hidden_damage_risk) {
+    const b = el("div", "banner warn");
+    b.append(el("strong", null, "May extend beyond what the photo shows"));
+    b.append(document.createTextNode(report.hidden_damage_risk));
+    pane.append(b);
+  }
+
+  // --- estimate ---
+  if (estimate) pane.append(renderEstimate(estimate));
+  pane.append(retakeButton());
+}
+
+function retakeButton() {
+  const b = el("button", "btn ghost", "Assess another photo");
+  b.onclick = () => { currentImage = null; $("#file").value = ""; step("capture"); };
+  return b;
+}
+
+function renderEstimate(est) {
+  const card = el("div", "card");
+  card.append(el("h2", null, "Estimated repair cost"));
+
+  const total = el("div", "total");
+  const fig = el("div", "figure");
+  fig.append(el("span", "cur", est.currency + " "),
+             document.createTextNode(
+               `${est.total_low.toLocaleString()} – ${est.total_high.toLocaleString()}`));
+  total.append(fig, el("div", "cap",
+    `${est.total_hours} labour hours at ${est.currency} ${est.labour_rate}/hr`));
+  card.append(total);
+
+  const table = el("table");
+  const thead = el("thead");
+  const hr = el("tr");
+  hr.append(el("th", null, "Repair"), el("th", "num", "Low"), el("th", "num", "High"));
+  thead.append(hr);
+  table.append(thead);
+
+  const tbody = el("tbody");
+  for (const line of est.lines) {
+    const tr = el("tr");
+    const what = el("td");
+    what.append(el("div", null, line.part_label || line.part.replace(/_/g, " ")),
+                el("div", "op", `${line.operation} · ${line.hours}h`));
+    tr.append(what,
+              el("td", "num", line.low.toLocaleString()),
+              el("td", "num", line.high.toLocaleString()));
+    tbody.append(tr);
+  }
+  table.append(tbody);
+
+  const tfoot = el("tfoot");
+  const row = (label, lo, hi, cls) => {
+    const tr = el("tr", cls);
+    tr.append(el("td", null, label), el("td", "num", lo.toLocaleString()),
+              el("td", "num", hi.toLocaleString()));
+    return tr;
+  };
+  tfoot.append(row("Parts, labour and paint", est.subtotal_low, est.subtotal_high));
+  tfoot.append(row(`Sundries (${est.sundries_percent}%)`, est.sundries_low, est.sundries_high));
+  tfoot.append(row(`Tax (${est.tax_percent}%)`, est.tax_low, est.tax_high));
+  tfoot.append(row("Total", est.total_low, est.total_high, "grand"));
+  table.append(tfoot);
+  card.append(table);
+
+  const note = el("div", "disclaimer");
+  note.textContent = est.needs_workshop_quote
+    ? "This is an indicative figure from one photograph, not a quote. Structural "
+      + "work is involved, so the real cost can only come from a workshop with the "
+      + "vehicle on a ramp. Hidden damage is not included."
+    : "This is an indicative figure from one photograph, not a quote. It assumes "
+      + "no hidden damage behind the panels, and uses the rates in rates.json — "
+      + "edit that file to match your workshop or region.";
+  card.append(note);
+  return card;
+}
+
+/* ---------- history ---------- */
+const SEV_COLOUR = {
+  severe: "var(--sev)", moderate: "var(--mod)",
+  minor: "var(--minor)", none: "var(--ok)",
+};
+
+async function loadHistory() {
+  try {
+    const res = await fetch("/api/history");
+    const { items, error } = await res.json();
+    if (error) throw new Error(error);
+    const box = $("#history");
+    box.textContent = "";
+    if (!items.length) {
+      box.append(el("p", "empty", "No assessments yet."));
+      return;
+    }
+    box.append(el("h2", null, `${items.length} assessment${items.length > 1 ? "s" : ""}`));
+    for (const it of items) {
+      const row = el("button", "hrow");
+      const dot = el("span", "dot");
+      dot.style.background = SEV_COLOUR[it.severity] || "var(--faint)";
+      const body = el("div", "body");
+      body.append(el("div", "r", `${it.reference} · ${it.created_at}`),
+                  el("div", "s", it.summary));
+      row.append(dot, body,
+                 el("span", "amt", `${it.currency} ${it.total_low.toLocaleString()}–${it.total_high.toLocaleString()}`));
+      row.onclick = () => openAssessment(it.id);
+      box.append(row);
+    }
+  } catch (e) { showError(e.message); }
+}
+
+async function openAssessment(id) {
+  try {
+    const res = await fetch("/api/assessment/" + id);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    currentImage = data.image;
+    $("#shot").src = data.image;
+    renderReport(data);
+    selectTab("scan");
+    step("report");
+    window.scrollTo({ top: 0 });
+  } catch (e) { showError(e.message); }
+}
+
+/* ---------- tabs ---------- */
+function selectTab(name) {
+  document.querySelectorAll(".tab").forEach(t =>
+    t.setAttribute("aria-selected", String(t.dataset.pane === name)));
+  $("#pane-scan").classList.toggle("hidden", name !== "scan");
+  $("#pane-history").classList.toggle("hidden", name !== "history");
+}
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.onclick = () => {
+    selectTab(tab.dataset.pane);
+    if (tab.dataset.pane === "history") loadHistory();
+  };
+});
+
+step("capture");
+loadHistory();
+</script>
+</body>
+</html>

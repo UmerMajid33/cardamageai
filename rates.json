@@ -1,0 +1,98 @@
+{
+  "_comment": "Every figure in an estimate comes from this file. The model never produces a price - it identifies parts, damage and the repair operation, and this table turns that into money. Edit these to match your market and the estimates change accordingly.",
+
+  "currency": "MYR",
+  "labour_rate_per_hour": 65,
+  "paint_material_per_panel": 180,
+  "sundries_percent": 6,
+  "tax_percent": 8,
+
+  "actions": {
+    "polish": {
+      "label": "Machine polish / buff",
+      "hours": { "minor": 0.5, "moderate": 1.0, "severe": 1.5 },
+      "paint_panels": 0,
+      "needs_part": false
+    },
+    "touch_up": {
+      "label": "Touch-up and localised refinish",
+      "hours": { "minor": 1.0, "moderate": 1.8, "severe": 2.5 },
+      "paint_panels": 0.5,
+      "needs_part": false
+    },
+    "dent_repair": {
+      "label": "Panel beating and refinish",
+      "hours": { "minor": 2.0, "moderate": 4.0, "severe": 7.0 },
+      "paint_panels": 1,
+      "needs_part": false
+    },
+    "paint": {
+      "label": "Strip, prep and respray panel",
+      "hours": { "minor": 2.5, "moderate": 3.5, "severe": 5.0 },
+      "paint_panels": 1,
+      "needs_part": false
+    },
+    "panel_replace": {
+      "label": "Replace panel and refinish",
+      "hours": { "minor": 3.0, "moderate": 4.5, "severe": 6.5 },
+      "paint_panels": 1,
+      "needs_part": true
+    },
+    "part_replace": {
+      "label": "Replace component",
+      "hours": { "minor": 1.0, "moderate": 2.0, "severe": 3.5 },
+      "paint_panels": 0,
+      "needs_part": true
+    },
+    "glass_replace": {
+      "label": "Replace glass and reseal",
+      "hours": { "minor": 1.5, "moderate": 2.5, "severe": 3.5 },
+      "paint_panels": 0,
+      "needs_part": true
+    },
+    "realign": {
+      "label": "Realign / refit",
+      "hours": { "minor": 1.0, "moderate": 2.5, "severe": 5.0 },
+      "paint_panels": 0,
+      "needs_part": false
+    },
+    "structural_inspection": {
+      "label": "Chassis inspection and pull (workshop quote required)",
+      "hours": { "minor": 3.0, "moderate": 8.0, "severe": 16.0 },
+      "paint_panels": 0,
+      "needs_part": false
+    }
+  },
+
+  "_parts_comment": "Low and high band for a replacement part, aftermarket to OEM. Used only when the action needs a part.",
+  "parts": {
+    "front_bumper":        [420, 1350],
+    "rear_bumper":         [400, 1250],
+    "bonnet":              [650, 2100],
+    "boot_lid":            [600, 1900],
+    "front_left_door":     [900, 2600],
+    "front_right_door":    [900, 2600],
+    "rear_left_door":      [850, 2400],
+    "rear_right_door":     [850, 2400],
+    "front_left_fender":   [320, 980],
+    "front_right_fender":  [320, 980],
+    "rear_left_quarter":   [700, 2200],
+    "rear_right_quarter":  [700, 2200],
+    "roof":                [900, 2800],
+    "windscreen":          [550, 1600],
+    "rear_windscreen":     [450, 1300],
+    "side_window":         [280, 780],
+    "headlight_left":      [480, 2400],
+    "headlight_right":     [480, 2400],
+    "taillight_left":      [260, 1100],
+    "taillight_right":     [260, 1100],
+    "wing_mirror_left":    [180, 850],
+    "wing_mirror_right":   [180, 850],
+    "grille":              [220, 900],
+    "wheel":               [300, 1400],
+    "tyre":                [180, 700],
+    "side_skirt":          [240, 820],
+    "underbody":           [400, 1800],
+    "other":               [200, 900]
+  }
+}
