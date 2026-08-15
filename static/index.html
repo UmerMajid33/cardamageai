@@ -6,8 +6,8 @@
 <title>Damage Assessment</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
-  body, h1, h2, h3, p, ul, li, dl, dd, figure { margin: 0; padding: 0; }
-  ul { list-style: none; }
+  body, h1, h2, h3, p, ul, ol, li, dl, dd, figure { margin: 0; padding: 0; }
+  ul, ol { list-style: none; }
 
   :root {
     --bg:      #f4f5f7;
@@ -63,9 +63,9 @@
   }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand .glyph {
-    width: 30px; height: 30px; border-radius: 8px; flex: none;
+    width: 30px; height: 30px; border-radius: 9px; flex: none;
     background: var(--brand); display: grid; place-items: center;
-    color: #fff; font: 700 15px var(--sans);
+    color: #fff; box-shadow: 0 3px 10px -4px var(--brand);
   }
   .brand h1 { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
   .tabs { display: flex; gap: 4px; margin-top: 12px; }
@@ -86,18 +86,63 @@
     color: var(--faint); margin-bottom: 14px;
   }
 
+  /* ---------- hero ---------- */
+  .hero { padding: 4px 0 20px; }
+  .hero h2 {
+    font-size: 27px; line-height: 1.18; font-weight: 700;
+    letter-spacing: -.028em; margin-bottom: 10px;
+  }
+  .hero p { color: var(--muted); font-size: 15.5px; max-width: 40ch; }
+
   /* ---------- capture ---------- */
   .drop {
-    border: 2px dashed var(--line-2); border-radius: 16px;
-    padding: 40px 20px; text-align: center; background: var(--card);
-    transition: border-color .2s, background .2s;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    text-align: center; cursor: pointer; padding: 34px 22px;
+    border: 1.5px dashed var(--line-2); border-radius: 16px;
+    background: linear-gradient(180deg, var(--card), var(--bg));
+    transition: border-color .2s, box-shadow .2s;
   }
-  .drop.over { border-color: var(--brand); background: var(--card); }
-  .drop .icon { font-size: 40px; line-height: 1; }
-  .drop p { color: var(--muted); font-size: 14px; margin-top: 10px; }
+  .drop:hover, .drop.over {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 11%, transparent);
+  }
+  .drop .icon {
+    width: 54px; height: 54px; border-radius: 15px; margin-bottom: 10px;
+    display: grid; place-items: center; color: var(--brand);
+    background: color-mix(in srgb, var(--brand) 12%, transparent);
+  }
+  .drop .t { font-weight: 650; font-size: 16.5px; color: var(--ink); }
+  .drop .s { color: var(--faint); font-size: 13px; }
+
+  /* ---------- guidance ---------- */
+  .tips li {
+    display: flex; gap: 11px; align-items: flex-start;
+    padding: 8px 0; font-size: 14.5px; color: var(--muted);
+  }
+  .tips li svg { flex: none; color: var(--brand); margin-top: 2px; }
+  .tips li b { color: var(--ink); font-weight: 600; }
+
+  .steps li {
+    display: flex; gap: 13px; align-items: flex-start;
+    padding: 12px 0; border-top: 1px solid var(--line);
+  }
+  .steps li:first-child { border-top: 0; padding-top: 0; }
+  .steps .n {
+    width: 23px; height: 23px; border-radius: 50%; flex: none;
+    background: var(--brand); color: #fff;
+    font: 650 11.5px/23px var(--mono); text-align: center;
+  }
+  .steps .w { font-weight: 650; font-size: 14.5px; }
+  .steps .d { color: var(--muted); font-size: 13.5px; }
+
+  .footnote {
+    text-align: center; color: var(--faint); font-size: 12.5px;
+    line-height: 1.55; padding: 4px 8px 8px;
+  }
 
   button.btn {
-    display: block; width: 100%; border: 0; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    width: 100%; border: 0; border-radius: 12px;
     padding: 15px 20px; font: 650 16px var(--sans); cursor: pointer;
     background: var(--brand); color: #fff; margin-top: 14px;
     transition: filter .15s, transform .1s;
@@ -217,7 +262,15 @@
 
   <header>
     <div class="brand">
-      <div class="glyph">DS</div>
+      <div class="glyph" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+          <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3"/>
+          <path d="M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/>
+          <path d="M13.4 7.5 9.8 12.2h4l-3.2 4.3"/>
+        </svg>
+      </div>
       <h1>Damage Assessment</h1>
     </div>
     <nav class="tabs" role="tablist">
@@ -232,14 +285,90 @@
   <section id="pane-scan">
 
     <div id="step-capture">
+      <section class="hero">
+        <h2>Assess accident damage in seconds.</h2>
+        <p>Photograph the damage and get a panel-by-panel report with an
+           itemised repair estimate.</p>
+      </section>
+
       <label class="drop" id="drop" for="file">
-        <div class="icon" aria-hidden="true">📷</div>
-        <p><strong>Take a photo of the damage</strong></p>
-        <p>Stand back far enough to show the whole damaged area, plus a little
-           of the undamaged panel around it.</p>
+        <span class="icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+               stroke-linejoin="round">
+            <path d="M3 8V5.5A1.5 1.5 0 0 1 4.5 4H7"/>
+            <path d="M17 4h2.5A1.5 1.5 0 0 1 21 5.5V8"/>
+            <path d="M21 16v2.5a1.5 1.5 0 0 1-1.5 1.5H17"/>
+            <path d="M7 20H4.5A1.5 1.5 0 0 1 3 18.5V16"/>
+            <circle cx="12" cy="12" r="3.4"/>
+          </svg>
+        </span>
+        <span class="t">Take or drop a photo</span>
+        <span class="s">Analysed on the spot · nothing leaves your machine but the image</span>
       </label>
       <input id="file" type="file" accept="image/*" capture="environment" class="hidden">
-      <button class="btn" id="pick">Open camera</button>
+      <button class="btn" id="pick">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/>
+          <circle cx="12" cy="12.8" r="3.3"/>
+        </svg>
+        Open camera
+      </button>
+
+      <div class="card" style="margin-top:22px">
+        <h2>For an accurate result</h2>
+        <ul class="tips">
+          <li>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/>
+            </svg>
+            <span><b>Frame the whole damaged area</b>, plus a little of the
+                  undamaged panel around it for scale.</span>
+          </li>
+          <li>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+            </svg>
+            <span><b>Even light.</b> A hard shadow across a dent reads as
+                  paint damage, and glare hides it entirely.</span>
+          </li>
+          <li>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+            </svg>
+            <span><b>Straight on, close enough to see texture</b> — the
+                  difference between a scuff and a crack is millimetres.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>How it works</h2>
+        <ol class="steps">
+          <li><span class="n">1</span><div>
+            <div class="w">Photograph</div>
+            <div class="d">One clear shot of the damaged area.</div></div></li>
+          <li><span class="n">2</span><div>
+            <div class="w">Assessment</div>
+            <div class="d">Each damaged part is identified, graded, and matched
+                           to the repair operation that fixes it.</div></div></li>
+          <li><span class="n">3</span><div>
+            <div class="w">Estimate</div>
+            <div class="d">Labour, paint and parts are costed line by line from
+                           a rate table you control.</div></div></li>
+        </ol>
+      </div>
+
+      <p class="footnote">
+        Estimates are indicative, from a single photograph.<br>
+        They are not a quote, and cannot account for damage behind the panels.
+      </p>
     </div>
 
     <div id="step-preview" class="hidden">
