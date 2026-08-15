@@ -659,7 +659,8 @@ function renderReport(data) {
   }
 
   // --- estimate ---
-  if (estimate) pane.append(renderEstimate(estimate));
+  // `{}` is truthy, and that is what a stored uncosted assessment looks like.
+  if (estimate && estimate.lines?.length) pane.append(renderEstimate(estimate));
   pane.append(retakeButton());
 }
 
@@ -753,8 +754,9 @@ async function loadHistory() {
       const body = el("div", "body");
       body.append(el("div", "r", `${it.reference} · ${it.created_at}`),
                   el("div", "s", it.summary));
-      row.append(dot, body,
-                 el("span", "amt", `${it.currency} ${it.total_low.toLocaleString()}–${it.total_high.toLocaleString()}`));
+      row.append(dot, body, el("span", "amt", it.priced
+        ? `${it.currency} ${it.total_low.toLocaleString()}–${it.total_high.toLocaleString()}`
+        : "not costed"));
       row.onclick = () => openAssessment(it.id);
       box.append(row);
     }

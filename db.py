@@ -80,7 +80,8 @@ def recent(conn, limit=40):
     out = []
     for row in rows:
         report = json.loads(row["report"])
-        estimate = json.loads(row["estimate"])
+        # Empty when the photo held no vehicle, so nothing was ever costed.
+        estimate = json.loads(row["estimate"]) or {}
         out.append({
             "id": row["id"],
             "reference": row["reference"],
@@ -88,9 +89,10 @@ def recent(conn, limit=40):
             "summary": report["summary"],
             "findings": len(report["findings"]),
             "severity": _worst(report["findings"]),
-            "total_low": estimate["total_low"],
-            "total_high": estimate["total_high"],
-            "currency": estimate["currency"],
+            "priced": bool(estimate),
+            "total_low": estimate.get("total_low", 0),
+            "total_high": estimate.get("total_high", 0),
+            "currency": estimate.get("currency", ""),
         })
     return out
 
